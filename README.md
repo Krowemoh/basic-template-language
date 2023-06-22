@@ -1,5 +1,4 @@
-# basic-template-language
-BASIC Templating Language
+# BASIC Templating Language
 
 This is a templating language for BASIC. It is dependent on using my implementation of hashmaps. This is part of my general TCL utilities.
 
