@@ -1,0 +1,765 @@
+   SUBROUTINE RAW.RENDER(MAT ENV,ENV.SIZE,MAT FILES,FILE.CTR,TEMPLATE,RESULT)
+*
+   GIT.FILENAME = 'RAW.RENDER'
+   GIT.REPO = 'https://github.com/Krowemoh/basic-template-language.git'
+*
+   EQU TRUE TO 1
+   EQU FALSE TO 0
+*
+   @USER1 = 'RAW.RENDER'
+   @USER2 = 'RAW.RENDER'
+*
+   EQU NEW.LINE TO CHAR(10)
+*
+   CONVERT @AM TO NEW.LINE IN TEMPLATE
+*
+   TEMPLATE.LEN = LEN(TEMPLATE)
+   RESULT = ''
+*
+   T.LINE.NUMBER = 1
+*
+* START OF RENDERING
+*
+   FOR LETTER.CTR = 1 TO TEMPLATE.LEN
+      LETTER = TEMPLATE[LETTER.CTR,1]
+      NEXT.LETTER = TEMPLATE[LETTER.CTR+1,1]
+*
+      BEGIN CASE
+         CASE LETTER = '{' AND NEXT.LETTER = '{'
+*
+            GOSUB SCAN.BASIC.LINE
+            BASIC.LINE = PROCESSED.BASIC.LINE
+*
+            GOSUB TOKENIZE.BASIC.LINE
+            TOKENS = PROCESSED.TOKENS
+*
+            FIRST.TOKEN = TOKENS<1>
+            SECOND.TOKEN = TOKENS<2>
+            LAST.TOKEN = TOKENS<DCOUNT(TOKENS,@AM)>
+*
+            BEGIN CASE
+               CASE FIRST.TOKEN = 'FOR'
+                  LOOP.VAR = TOKENS<2>
+                  LOOP.START.EXPR = TOKENS<4>
+                  LOOP.END.EXPR = TOKENS<6>
+*
+                  CALL EVALUATE(MAT ENV,ENV.SIZE,LOOP.START.EXPR,LOOP.START)
+                  CALL EVALUATE(MAT ENV,ENV.SIZE,LOOP.END.EXPR,LOOP.END)
+*
+                  BLOCK.DONE = FALSE
+                  BLOCK = ''
+*
+                  LOOP UNTIL BLOCK.DONE OR LETTER.CTR > TEMPLATE.LEN DO
+                     LETTER.CTR = LETTER.CTR + 1
+                     LETTER = TEMPLATE[LETTER.CTR,1]
+                     NEXT.LETTER = TEMPLATE[LETTER.CTR+1,1]
+*
+                     IF LETTER = '{' AND NEXT.LETTER = '{' THEN
+                        GOSUB SCAN.BASIC.LINE
+                        BASIC.LINE = PROCESSED.BASIC.LINE
+*
+                        GOSUB TOKENIZE.BASIC.LINE
+                        TOKENS = PROCESSED.TOKENS
+*
+                        IF TOKENS<1> = 'NEXT' AND TOKENS<2> = LOOP.VAR THEN
+                           BLOCK.DONE = TRUE
+                           EXIT
+                        END ELSE
+                           BLOCK = BLOCK : '{{ ' : BASIC.LINE : ' }}'
+                        END
+*
+                     END ELSE
+                        BLOCK = BLOCK : LETTER
+                     END
+                  REPEAT
+*
+                  FOR LOOP.INDEX = LOOP.START TO LOOP.END
+                     CALL MAP.SET(MAT ENV,ENV.SIZE,LOOP.VAR,LOOP.INDEX)
+                     CALL RAW.RENDER(MAT ENV,ENV.SIZE,MAT FILES,FILE.CTR,BLOCK,RESULT.TEMP)
+                     RESULT = RESULT : RESULT.TEMP
+                  NEXT LOOP.INDEX
+*
+               CASE FIRST.TOKEN = 'LOOP'
+                  BLOCK.DONE = FALSE
+*
+                  LOOP.BLOCK = ''
+                  UNTIL.LINE = ''
+                  BLOCK = ''
+*
+                  STACK.CTR = 1
+*
+                  IF SECOND.TOKEN = 'UNTIL' THEN
+                     UNTIL.LINE = BASIC.LINE
+                  END
+*
+                  LOOP UNTIL BLOCK.DONE OR LETTER.CTR > TEMPLATE.LEN DO
+                     LETTER.CTR = LETTER.CTR + 1
+*
+                     LETTER = TEMPLATE[LETTER.CTR,1]
+                     NEXT.LETTER = TEMPLATE[LETTER.CTR+1,1]
+*
+                     IF LETTER = '{' AND NEXT.LETTER = '{' THEN
+                        GOSUB SCAN.BASIC.LINE
+                        BASIC.LINE = PROCESSED.BASIC.LINE
+*
+                        GOSUB TOKENIZE.BASIC.LINE
+                        TOKENS = PROCESSED.TOKENS
+*
+                        FIRST.TOKEN = TOKENS<1>
+                        LAST.TOKEN = TOKENS<DCOUNT(TOKENS,@AM)>
+*
+                        IF FIRST.TOKEN = 'REPEAT' THEN
+                           STACK.CTR = STACK.CTR - 1
+                        END
+*
+                        IF FIRST.TOKEN = 'LOOP' THEN
+                           STACK.CTR = STACK.CTR + 1
+                           BLOCK = BLOCK : '{{ ' : BASIC.LINE : ' }}'
+*
+                        END ELSE IF FIRST.TOKEN = 'UNTIL' THEN
+                           IF STACK.CTR = 1 THEN
+                              UNTIL.LINE = BASIC.LINE
+                              LOOP.BLOCK = BLOCK;
+                              BLOCK = ''
+                           END ELSE
+                              BLOCK = BLOCK : '{{ ' : BASIC.LINE : ' }}'
+                           END
+                           
+                        END ELSE
+                           IF STACK.CTR # 0 THEN
+                              BLOCK = BLOCK : '{{ ' : BASIC.LINE : ' }}'
+                           END
+                        END
+*
+                        IF STACK.CTR = 0 THEN
+                           BLOCK.DONE = TRUE
+                        END
+*
+                     END ELSE
+                        BLOCK = BLOCK : LETTER
+                     END
+                  REPEAT
+*
+                  C.EXPR = UNTIL.LINE
+                  IF C.EXPR[1,4] = 'LOOP' THEN
+                     C.EXPR = TRIM(C.EXPR[5,999])
+                  END
+                  IF C.EXPR[1,5] = 'UNTIL' THEN
+                     C.EXPR = TRIM(C.EXPR[6,999])
+                  END
+                  IF C.EXPR[LEN(C.EXPR)-1,2] = 'DO' THEN
+                     C.EXPR = TRIM(C.EXPR[1,LEN(C.EXPR)-2])
+                  END
+*
+                  COND.RESULT = FALSE
+*
+                  LOOP
+                     IF LOOP.BLOCK THEN
+                        CALL RAW.RENDER(MAT ENV,ENV.SIZE,MAT FILES,FILE.CTR,LOOP.BLOCK,RESULT.TEMP)
+                        RESULT = RESULT : RESULT.TEMP
+                     END
+*
+                     CALL EVALUATE(MAT ENV,ENV.SIZE,C.EXPR,COND.RESULT)
+*
+                  UNTIL COND.RESULT DO
+                     IF BLOCK THEN
+                        CALL RAW.RENDER(MAT ENV,ENV.SIZE,MAT FILES,FILE.CTR,BLOCK,RESULT.TEMP)
+                        RESULT = RESULT : RESULT.TEMP
+                     END
+                  REPEAT
+*
+               CASE FIRST.TOKEN = 'IF' AND LAST.TOKEN = 'THEN'
+                  BLOCK.DONE = FALSE
+                  BLOCK = ''
+*
+                  CONDITIONALS = BASIC.LINE
+                  BLOCKS = ''
+*
+                  STACK.CTR = 1
+*
+                  LOOP UNTIL BLOCK.DONE OR LETTER.CTR > TEMPLATE.LEN DO
+                     LETTER.CTR = LETTER.CTR + 1
+*
+                     LETTER = TEMPLATE[LETTER.CTR,1]
+                     NEXT.LETTER = TEMPLATE[LETTER.CTR+1,1]
+*
+                     IF LETTER = '{' AND NEXT.LETTER = '{' THEN
+                        GOSUB SCAN.BASIC.LINE
+                        BASIC.LINE = PROCESSED.BASIC.LINE
+*
+                        GOSUB TOKENIZE.BASIC.LINE
+                        TOKENS = PROCESSED.TOKENS
+*
+                        FIRST.TOKEN = TOKENS<1>
+                        LAST.TOKEN = TOKENS<DCOUNT(TOKENS,@AM)>
+*
+                        IF FIRST.TOKEN = 'END' THEN
+                           STACK.CTR = STACK.CTR - 1
+                        END
+*
+                        IF STACK.CTR = 0 THEN
+                           BLOCKS<-1> = BLOCK
+                           BLOCK = ''
+                        END
+*
+                        IF LAST.TOKEN = 'THEN' OR LAST.TOKEN = 'ELSE' OR LAST.TOKEN = 'LOCKED' THEN
+                           STACK.CTR = STACK.CTR + 1
+                           IF STACK.CTR = 1 THEN
+                              CONDITIONALS<-1> = BASIC.LINE
+                           END ELSE
+                              BLOCK = BLOCK : '{{ ' : BASIC.LINE : ' }}'
+                           END
+                        END ELSE
+                           BLOCK = BLOCK : '{{ ' : BASIC.LINE : ' }}'
+                        END
+*
+                        IF STACK.CTR = 0 THEN
+                           BLOCK.DONE = TRUE
+                        END
+*
+                     END ELSE
+                        BLOCK = BLOCK : LETTER
+                     END
+                  REPEAT
+*
+                  NUMBER.OF.CONDITIONS = DCOUNT(CONDITIONALS,@AM)
+*
+                  CONDITION.MET = FALSE
+*
+                  FOR COND.CTR = 1 TO NUMBER.OF.CONDITIONS UNTIL CONDITION.MET
+                     C.EXPR = CONDITIONALS<COND.CTR>
+                     BLOCK = BLOCKS<COND.CTR>
+                     IF C.EXPR[1,3] = 'END' THEN
+                        C.EXPR = TRIM(C.EXPR[4,999])
+                     END
+                     IF C.EXPR[1,4] = 'ELSE' THEN
+                        C.EXPR = TRIM(C.EXPR[5,999])
+                     END
+                     IF C.EXPR[1,2] = 'IF' THEN
+                        C.EXPR = TRIM(C.EXPR[3,999])
+                     END
+                     IF C.EXPR[LEN(C.EXPR)-3,4] = 'THEN' THEN
+                        C.EXPR = TRIM(C.EXPR[1,LEN(C.EXPR)-4])
+                     END
+                     IF C.EXPR = '' THEN
+                        CALL RAW.RENDER(MAT ENV,ENV.SIZE,MAT FILES,FILE.CTR,BLOCK,RESULT.TEMP)
+                        RESULT = RESULT : RESULT.TEMP
+                        CONDITION.MET = TRUE
+                     END ELSE
+                        CALL EVALUATE(MAT ENV,ENV.SIZE,C.EXPR,COND.RESULT)
+                        IF COND.RESULT = 1 THEN
+                           CALL RAW.RENDER(MAT ENV,ENV.SIZE,MAT FILES,FILE.CTR,BLOCK,RESULT.TEMP)
+                           RESULT = RESULT : RESULT.TEMP
+                           CONDITION.MET = TRUE
+                        END
+                     END
+                  NEXT COND.CTR
+*
+               CASE TRUE
+                  GOSUB PARSE.BASIC.LINE
+                  PARSED.LINE = TRIM(PARSED.LINE)
+*
+                  IF PARSED.LINE # '' THEN
+                     RESULT = RESULT : PARSED.LINE
+                  END ELSE
+                     LETTER.CTR = LETTER.CTR + 1
+                     NEXT.LETTER = TEMPLATE[LETTER.CTR,1]
+                     IF NEXT.LETTER = NEW.LINE THEN
+                        LETTER.CTR = LETTER.CTR + 1
+                     END
+                  END
+            END CASE
+*
+         CASE TRUE
+            IF LETTER = NEW.LINE THEN
+               T.LINE.NUMBER = T.LINE.NUMBER + 1
+            END
+            RESULT = RESULT : LETTER
+      END CASE
+*
+   NEXT LETTER.CTR
+*
+   RESULT = TRIM(RESULT,CHAR(10))
+*
+   RETURN
+*
+*********************  S U B R O U T I N E  *********************
+*
+SCAN.BASIC.LINE:NULL
+*
+   PROCESSED.BASIC.LINE = ''
+   LETTER.CTR = LETTER.CTR + 1
+*
+   DONE = FALSE
+*
+   LOOP
+      LETTER.CTR = LETTER.CTR + 1
+      LETTER = TEMPLATE[LETTER.CTR,1]
+      NEXT.LETTER = TEMPLATE[LETTER.CTR+1,1]
+*
+   UNTIL (LETTER = '}' AND NEXT.LETTER = '}') OR LETTER.CTR > TEMPLATE.LEN DO
+      PROCESSED.BASIC.LINE = PROCESSED.BASIC.LINE : LETTER
+   REPEAT
+*
+   LETTER.CTR = LETTER.CTR + 1
+*
+   PROCESSED.BASIC.LINE = TRIM(PROCESSED.BASIC.LINE)
+*
+   RETURN
+*
+*********************  S U B R O U T I N E  *********************
+*
+TOKENIZE.BASIC.LINE:NULL
+*
+   BASIC.LINE.LEN = LEN(BASIC.LINE)
+*
+   PROCESSED.TOKENS = ''
+   TOKEN = ''
+*
+   FOR BUILD.TOKEN.CTR = 1 TO BASIC.LINE.LEN
+      BUILD.TOKEN = BASIC.LINE[BUILD.TOKEN.CTR,1]
+*
+      IF BUILD.TOKEN = ' ' OR BUILD.TOKEN = '=' THEN
+         IF TRIM(TOKEN) # '' THEN
+            PROCESSED.TOKENS<-1> = TRIM(TOKEN)
+            TOKEN = ''
+         END
+      END
+*
+      TOKEN = TOKEN : BUILD.TOKEN
+   NEXT BUILD.TOKEN.CTR
+*
+   IF TOKEN THEN
+      PROCESSED.TOKENS<-1> = TRIM(TOKEN)
+   END
+*
+   RETURN
+*
+*********************  S U B R O U T I N E  *********************
+*
+PARSE.BASIC.LINE:NULL
+*
+   BASIC.LINE.LEN = LEN(BASIC.LINE)
+*
+   TOKEN = TOKENS<1>
+   SECOND.TOKEN = TOKENS<2>
+*
+   PARSED.LINE = ''
+*
+   BEGIN CASE
+      CASE TOKEN = 'PRINT'
+         BASIC.LINE = TRIM(BASIC.LINE[INDEX(BASIC.LINE,' ',1)+1,9999])
+         CALL EVALUATE(MAT ENV,ENV.SIZE,BASIC.LINE,EVAL.RESULT)
+         PRINT EVAL.RESULT
+*
+      CASE TOKEN = 'CALL'
+         BASIC.LINE = TRIM(BASIC.LINE[INDEX(BASIC.LINE,' ',1)+1,9999])
+         CALL EVALUATE(MAT ENV,ENV.SIZE,BASIC.LINE,EVAL.RESULT)
+*
+      CASE TOKEN = 'OPEN'
+         WORD = ''
+         WORDS = ''
+*
+         FOR B.LETTER.CTR = 1 TO  BASIC.LINE.LEN
+            B.LETTER = BASIC.LINE[B.LETTER.CTR,1]
+            BEGIN CASE
+               CASE B.LETTER = ' '
+                  WORD = TRIM(WORD)
+                  IF WORD THEN
+                     WORDS<-1> = TRIM(WORD)
+                  END
+                  WORD = ''
+*
+               CASE B.LETTER = ','
+                  WORDS<-1> = TRIM(WORD)
+                  WORD = ''
+*
+               CASE TRUE
+                  WORD = WORD : B.LETTER
+            END CASE
+         NEXT B.LETTER.CTR
+*
+         IF WORD THEN
+            WORDS<-1> = TRIM(WORD)
+         END
+*
+         DICT.NAME.EXPR = WORDS<2>
+         FILE.NAME.EXPR = WORDS<3>
+         VAR.NAME = WORDS<5>
+*
+         ELSE.CLAUSE = WORDS<6>
+         IF ELSE.CLAUSE = 'ELSE' THEN
+            ELSE.CLAUSE = '{{ ' : BASIC.LINE[INDEX(BASIC.LINE,' ELSE ',1)+6,9999] : ' }}'
+         END ELSE
+            ELSE.CLAUSE = ''
+         END
+*
+         CALL EVALUATE(MAT ENV,ENV.SIZE,DICT.NAME.EXPR,DICT.NAME)
+         CALL EVALUATE(MAT ENV,ENV.SIZE,FILE.NAME.EXPR,FILE.NAME)
+*
+         OPEN.FILE = TRUE
+*
+         IF ELSE.CLAUSE THEN
+            OPEN DICT.NAME,FILE.NAME TO FILE.POINTER ELSE
+               CALL RAW.RENDER(MAT ENV,ENV.SIZE,MAT FILES,FILE.CTR,ELSE.CLAUSE,PARSED.LINE)
+               OPEN.FILE = FALSE
+            END
+*
+         END ELSE
+            OPEN DICT.NAME,FILE.NAME TO FILE.POINTER ELSE
+               PRINT '[Line ' : T.LINE.NUMBER : '] Cannot open: ' : FILE.NAME
+               STOP
+            END
+         END
+*
+         IF OPEN.FILE THEN
+            FILE.CTR = FILE.CTR + 1
+            CALL MAP.SET(MAT ENV,ENV.SIZE,VAR.NAME,FILE.CTR)
+            FILES(FILE.CTR) = FILE.POINTER
+         END
+*
+      CASE TOKEN = 'READ'
+         BASIC.LINE.LEN = LEN(BASIC.LINE)
+*
+         WORD = ''
+         WORDS = ''
+*
+         FOR B.LETTER.CTR = 1 TO  BASIC.LINE.LEN
+            B.LETTER = BASIC.LINE[B.LETTER.CTR,1]
+            BEGIN CASE
+               CASE B.LETTER = ' '
+                  WORD = TRIM(WORD)
+                  IF WORD THEN
+                     WORDS<-1> = TRIM(WORD)
+                  END
+                  WORD = ''
+*
+               CASE B.LETTER = ','
+                  WORDS<-1> = TRIM(WORD)
+                  WORD = ''
+*
+               CASE TRUE
+                  WORD = WORD : B.LETTER
+            END CASE
+         NEXT B.LETTER.CTR
+*
+         IF WORD THEN
+            WORDS<-1> = TRIM(WORD)
+         END
+*
+         VAR.NAME = TRIM(WORDS<2>)
+         FILE.NAME = WORDS<4>
+         ITEM.ID.EXPR = WORDS<5>
+*
+         ELSE.CLAUSE = WORDS<6>
+         IF ELSE.CLAUSE = 'ELSE' THEN
+            ELSE.CLAUSE = '{{ ' : BASIC.LINE[INDEX(BASIC.LINE,' ELSE ',1)+6,9999] : ' }}'
+         END ELSE
+            ELSE.CLAUSE = ''
+         END
+*
+         CALL EVALUATE(MAT ENV,ENV.SIZE,ITEM.ID.EXPR,ITEM.ID)
+*
+         CALL MAP.GET(MAT ENV,ENV.SIZE,FILE.NAME,FILE.NUMBER)
+*
+         IF FILE.NUMBER = '' THEN
+            PRINT 'Render Error: File not open - ' : FILE.NAME
+            STOP
+         END
+*
+         FILE.POINTER = FILES(FILE.NUMBER)
+*
+         READ.FILE = TRUE
+*
+         IF ELSE.CLAUSE THEN
+            READ RECORD FROM FILE.POINTER,ITEM.ID ELSE
+               CALL RAW.RENDER(MAT ENV,ENV.SIZE,MAT FILES,FILE.CTR,ELSE.CLAUSE,PARSED.LINE)
+               READ.FILE = FALSE
+            END
+         END ELSE
+            READ RECORD FROM FILE.POINTER,ITEM.ID ELSE
+               PRINT '[Line ' : T.LINE.NUMBER : '] Cannot read: ' : ITEM.ID
+               STOP
+            END
+         END
+*
+         IF READ.FILE THEN
+            CALL MAP.SET(MAT ENV,ENV.SIZE,VAR.NAME,RECORD)
+         END
+*
+      CASE TOKEN = 'IF'
+         WORD = ''
+         WORDS = ''
+*
+         THEN.FLAG = FALSE
+*
+         FOR B.LETTER.CTR = 3 TO  BASIC.LINE.LEN
+            B.LETTER = BASIC.LINE[B.LETTER.CTR,1]
+            NEXT.WORD = BASIC.LINE[B.LETTER.CTR,6]
+            BEGIN CASE
+               CASE NEXT.WORD = ' THEN ' OR NEXT.WORD = ' ELSE '
+                  IF NEXT.WORD = ' THEN ' THEN
+                     THEN.FLAG = TRUE
+                  END
+                  WORD = TRIM(WORD)
+                  IF WORD THEN
+                     WORDS<-1> = TRIM(WORD)
+                  END
+                  WORD = ''
+                  B.LETTER.CTR = B.LETTER.CTR + 5
+               CASE TRUE
+                  WORD = WORD : B.LETTER
+            END CASE
+         NEXT B.LETTER.CTR
+*
+         IF WORD THEN
+            WORDS<-1> = TRIM(WORD)
+         END
+*
+         CONDITIONAL.EXPR = WORDS<1>
+         THEN.EXPR = WORDS<2>
+         ELSE.EXPR = WORDS<3>
+*
+         IF NOT(THEN.FLAG) THEN
+            ELSE.EXPR = WORDS<2>
+            THEN.EXPR = ''
+         END
+*
+         CALL EVALUATE(MAT ENV,ENV.SIZE,CONDITIONAL.EXPR,CONDITIONAL)
+*
+         IF CONDITIONAL THEN
+            IF THEN.EXPR THEN
+               THEN.EXPR = '{{ ' : THEN.EXPR : ' }}'
+               CALL RAW.RENDER(MAT ENV,ENV.SIZE,MAT FILES,FILE.CTR,THEN.EXPR,PARSED.LINE)
+            END
+         END ELSE
+            IF ELSE.EXPR THEN
+               ELSE.EXPR = '{{ ' : ELSE.EXPR : ' }}'
+               CALL RAW.RENDER(MAT ENV,ENV.SIZE,MAT FILES,FILE.CTR,ELSE.EXPR,PARSED.LINE)
+            END
+         END
+*
+      CASE TOKEN = 'INCLUDE'
+         WORD = ''
+         WORDS = ''
+*
+         FOR B.LETTER.CTR = 1 TO  BASIC.LINE.LEN
+            B.LETTER = BASIC.LINE[B.LETTER.CTR,1]
+            BEGIN CASE
+               CASE B.LETTER = ' '
+                  WORD = TRIM(WORD)
+                  IF WORD THEN
+                     WORDS<-1> = TRIM(WORD)
+                  END
+                  WORD = ''
+*
+               CASE B.LETTER = ','
+                  WORDS<-1> = TRIM(WORD)
+                  WORD = ''
+*
+               CASE TRUE
+                  WORD = WORD : B.LETTER
+            END CASE
+         NEXT B.LETTER.CTR
+*
+         IF WORD THEN
+            WORDS<-1> = TRIM(WORD)
+         END
+*
+         FILE.NAME.EXPR = WORDS<2>
+         RECORD.NAME.EXPR = WORDS<3>
+*
+         CALL EVALUATE(MAT ENV,ENV.SIZE,FILE.NAME.EXPR,FILE.NAME)
+         CALL EVALUATE(MAT ENV,ENV.SIZE,RECORD.NAME.EXPR,RECORD.ID)
+*
+         OPEN '',FILE.NAME TO INCLUDE.FILE ELSE
+            PRINT 'Failed to open: ' : FILE.NAME
+            STOP
+         END
+*
+         READ RECORD FROM INCLUDE.FILE,RECORD.ID ELSE
+            PRINT 'Failed to read: ' : RECORD.ID
+            STOP
+         END
+*
+         CALL RAW.RENDER(MAT ENV,ENV.SIZE,MAT FILES,FILE.CTR,RECORD,PARSED.LINE)
+*
+      CASE TRUE
+         IF SECOND.TOKEN = '=' THEN
+*
+            BEGIN CASE
+               CASE INDEX(TOKEN,'<',1) > 0
+                  VAR.NAME.EXPR = TOKEN
+                  VAR.NAME.TOKEN.LEN = LEN(TOKEN)
+*
+                  VAR.NAME = ''
+                  R.TOKENS = ''
+                  R.STRING = ''
+*
+                  FOR B.LETTER.CTR = 1 TO VAR.NAME.TOKEN.LEN
+                     B.LETTER = VAR.NAME.EXPR[B.LETTER.CTR,1]
+*
+                     IF B.LETTER = '<' THEN
+                        STACK.CTR = 1
+                        B.LETTER.CTR = B.LETTER.CTR + 1
+*
+                        LOOP UNTIL STACK.CTR = 0 OR B.LETTER.CTR > BASIC.LINE.LEN DO
+                           B.LETTER = VAR.NAME.EXPR[B.LETTER.CTR,1]
+*
+                           IF B.LETTER = ',' AND STACK.CTR = 1 THEN
+                              R.TOKENS<-1> = R.STRING
+                              R.STRING = ''
+*
+                           END ELSE IF B.LETTER = '<' THEN
+                              STACK.CTR = STACK.CTR + 1
+                              R.STRING = R.STRING : B.LETTER
+*
+                           END ELSE IF B.LETTER = '>' THEN
+                              STACK.CTR = STACK.CTR - 1
+                              IF STACK.CTR # 0 THEN
+                                 R.STRING = R.STRING : B.LETTER
+                              END
+*
+                           END ELSE
+                              R.STRING = R.STRING : B.LETTER
+                           END
+*
+                           B.LETTER.CTR = B.LETTER.CTR + 1
+                        REPEAT
+*
+                        R.TOKENS<-1> = R.STRING
+*
+                     END ELSE
+                        VAR.NAME = VAR.NAME : B.LETTER
+                     END
+                  NEXT B.LETTER.CTR
+*
+                  EVALUATED.TOKENS = ''
+                  R.TOKENS.LEN = DCOUNT(R.TOKENS,@AM)
+*
+                  FOR R.TOKENS.CTR = 1 TO R.TOKENS.LEN
+                     R.STRING = R.TOKENS<R.TOKENS.CTR>
+                     CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE)
+                     EVALUATED.TOKENS<-1> = LOWER(R.VALUE)
+                  NEXT I
+*
+                  NUMBER.OF.EVALUATED.TOKENS = DCOUNT(EVALUATED.TOKENS,@AM)
+*
+                  P1 = RAISE(EVALUATED.TOKENS<1>)
+                  P2 = RAISE(EVALUATED.TOKENS<2>)
+                  P3 = RAISE(EVALUATED.TOKENS<3>)
+*
+                  BASIC.LINE = TRIM(BASIC.LINE[INDEX(BASIC.LINE,'=',1)+1,9999])
+*
+                  CALL EVALUATE(MAT ENV,ENV.SIZE,BASIC.LINE,EVAL.RESULT)
+*
+                  CALL MAP.GET(MAT ENV,ENV.SIZE,VAR.NAME,VAR.VALUE)
+*
+                  IF NUMBER.OF.EVALUATED.TOKENS = 1 THEN
+                     VAR.VALUE<P1> = EVAL.RESULT
+                     
+                  END ELSE IF NUMBER.OF.EVALUATED.TOKENS = 2 THEN
+                     VAR.VALUE<P1,P2> = EVAL.RESULT
+*
+                  END ELSE IF NUMBER.OF.EVALUATED.TOKENS = 3 THEN
+                     VAR.VALUE<P1,P2,P3> = EVAL.RESULT
+*
+                  END ELSE
+*
+                  END
+*
+                  CALL MAP.SET(MAT ENV,ENV.SIZE,VAR.NAME,VAR.VALUE)
+*
+               CASE INDEX(TOKEN,'[',1) > 0
+                  VAR.NAME.EXPR = TOKEN
+                  VAR.NAME.TOKEN.LEN = LEN(TOKEN)
+*
+                  VAR.NAME = ''
+                  R.TOKENS = ''
+                  R.STRING = ''
+*
+                  FOR B.LETTER.CTR = 1 TO VAR.NAME.TOKEN.LEN
+                     B.LETTER = VAR.NAME.EXPR[B.LETTER.CTR,1]
+*
+                     IF B.LETTER = '[' THEN
+                        STACK.CTR = 1
+                        B.LETTER.CTR = B.LETTER.CTR + 1
+*
+                        LOOP UNTIL STACK.CTR = 0 OR B.LETTER.CTR > BASIC.LINE.LEN DO
+                           B.LETTER = VAR.NAME.EXPR[B.LETTER.CTR,1]
+*
+                           IF B.LETTER = ',' AND STACK.CTR = 1 THEN
+                              R.TOKENS<-1> = R.STRING
+                              R.STRING = ''
+*
+                           END ELSE IF B.LETTER = '[' THEN
+                              STACK.CTR = STACK.CTR + 1
+                              R.STRING = R.STRING : B.LETTER
+*
+                           END ELSE IF B.LETTER = ']' THEN
+                              STACK.CTR = STACK.CTR - 1
+                              IF STACK.CTR # 0 THEN
+                                 R.STRING = R.STRING : B.LETTER
+                              END
+*
+                           END ELSE
+                              R.STRING = R.STRING : B.LETTER
+                           END
+*
+                           B.LETTER.CTR = B.LETTER.CTR + 1
+                        REPEAT
+*
+                        R.TOKENS<-1> = R.STRING
+*
+                     END ELSE
+                        VAR.NAME = VAR.NAME : B.LETTER
+                     END
+                  NEXT B.LETTER.CTR
+*
+                  EVALUATED.TOKENS = ''
+                  R.TOKENS.LEN = DCOUNT(R.TOKENS,@AM)
+*
+                  FOR R.TOKENS.CTR = 1 TO R.TOKENS.LEN
+                     R.STRING = R.TOKENS<R.TOKENS.CTR>
+                     CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE)
+                     EVALUATED.TOKENS<-1> = LOWER(R.VALUE)
+                  NEXT I
+*
+                  NUMBER.OF.EVALUATED.TOKENS = DCOUNT(EVALUATED.TOKENS,@AM)
+*
+                  P1 = RAISE(EVALUATED.TOKENS<1>)
+                  P2 = RAISE(EVALUATED.TOKENS<2>)
+*
+                  BASIC.LINE = TRIM(BASIC.LINE[INDEX(BASIC.LINE,'=',1)+1,9999])
+*
+                  CALL EVALUATE(MAT ENV,ENV.SIZE,BASIC.LINE,EVAL.RESULT)
+*
+                  CALL MAP.GET(MAT ENV,ENV.SIZE,VAR.NAME,VAR.VALUE)
+*
+                  IF NUMBER.OF.EVALUATED.TOKENS = 2 THEN
+                     VAR.VALUE[P1,P2] = EVAL.RESULT
+                  END
+*
+                  CALL MAP.SET(MAT ENV,ENV.SIZE,VAR.NAME,VAR.VALUE)
+*
+               CASE TRUE
+                  VAR.NAME = TOKEN
+                  BASIC.LINE = TRIM(BASIC.LINE[INDEX(BASIC.LINE,'=',1)+1,9999])
+                  CALL EVALUATE(MAT ENV,ENV.SIZE,BASIC.LINE,EVAL.RESULT)
+                  CALL MAP.SET(MAT ENV,ENV.SIZE,VAR.NAME,EVAL.RESULT)
+*
+            END CASE
+*
+         END ELSE
+            CALL EVALUATE(MAT ENV,ENV.SIZE,BASIC.LINE,EVAL.RESULT)
+            PARSED.LINE = EVAL.RESULT
+         END
+*
+   END CASE
+*
+   RETURN
+*
+* END OF PROGRAM
+*
+   END
+*
