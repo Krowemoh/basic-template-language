@@ -1,0 +1,18 @@
+   SUBROUTINE RENDER(MAT ENV,ENV.SIZE,TEMPLATE,RESULT)
+*
+   GIT.FILENAME = 'RENDER'
+   GIT.REPO = 'https://github.com/Krowemoh/basic-template-language.git'
+*
+   DIM FILES(1000)
+   MAT FILES = ''
+   FILE.CTR = 0
+*
+   RESULT = ''
+   CALL RAW.RENDER(MAT ENV,ENV.SIZE,MAT FILES,FILE.CTR,TEMPLATE,RESULT)
+*
+   RETURN
+*
+* END OF PROGRAM
+*
+   END
+*
