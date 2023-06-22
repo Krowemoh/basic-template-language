@@ -8,7 +8,9 @@ This is a templating language for BASIC. It is dependent on using my implementat
 *
     EQU ENV.SIZE TO 5000
     DIM ENV(ENV.SIZE)
+*
     MAT ENV = ''
+*
     CALL MAP.SET(MAT ENV,ENV.SIZE,'NAME','Bob')
 *
     TEMPLATE = '<div>Hello {{ NAME }}</div>'
