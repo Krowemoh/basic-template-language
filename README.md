@@ -5,10 +5,18 @@ This is a templating language for BASIC. It is dependent on using my implementat
 ## Usage
 
 ```
+*
+EQU ENV.SIZE TO 5000
+DIM ENV(ENV.SIZE)
+MAT ENV = ''
 CALL MAP.SET(MAT ENV,ENV.SIZE,'NAME','Bob')
 *
 TEMPLATE = '<div>Hello {{ NAME }}</div>'
 CALL RENDER(MAT ENV,ENV.SIZE,TEMPLATE,RESULT)
+*
+* END OF PROGRAM
+*
+END
 ```
 
 Outputs:
