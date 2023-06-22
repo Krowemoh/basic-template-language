@@ -6,7 +6,7 @@ This is a templating language for BASIC. It is dependent on using my implementat
 ## Usage
 
 ```
-CALL MAP.SET(MAT ENV,ENV.SIZE,'NAME',"Bob")
+CALL MAP.SET(MAT ENV,ENV.SIZE,'NAME','Bob')
 *
 TEMPLATE = '<div>Hello {{ NAME }}</div>'
 CALL RENDER(MAT ENV,ENV.SIZE,TEMPLATE,RESULT)
