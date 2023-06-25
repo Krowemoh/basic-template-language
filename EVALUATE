@@ -408,6 +408,9 @@ EVALUATE.EXPRESSION:NULL
          END ELSE IF TOKEN = '<=' THEN
             TEMP = R1 <= R2
 *
+         END ELSE IF TOKEN = '#' THEN
+            TEMP = R1 # R2
+            
          END ELSE IF TOKEN = 'AND' THEN
             TEMP = R1 AND R2
 *
