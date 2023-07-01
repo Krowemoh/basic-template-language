@@ -96,6 +96,14 @@
                OPEN.STATEMENT = CHANGE(OPEN.STATEMENT,' TO ',@AM)
 *
                FILENAME.EXPR = OPEN.STATEMENT<1>
+*
+               IF INDEX(FILENAME.EXPR,',',1) = 0 THEN
+                  DICT = ''
+               END ELSE
+                  DICT = FIELD(FILENAME.EXPR,',',1)
+                  FILENAME.EXPR = FIELD(FILENAME.EXPR,',',2)
+               END
+*
                FILENAME.IDENT = TRIM(OPEN.STATEMENT<2>)
 *
                TRUE.BLOCK = BLOCKS<1>
@@ -103,7 +111,7 @@
 *
                CALL EVALUATE(MAT ENV,ENV.SIZE,FILENAME.EXPR,FILE.NAME)
 *
-               OPEN FILE.NAME TO FILE.POINTER THEN
+               OPEN DICT,FILE.NAME TO FILE.POINTER THEN
                   IF TRUE.BLOCK # '' THEN
                      FILE.CTR = FILE.CTR + 1
                      CALL MAP.SET(MAT ENV,ENV.SIZE,FILENAME.IDENT,FILE.CTR)
