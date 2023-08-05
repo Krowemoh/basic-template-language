@@ -3,6 +3,8 @@
    GIT.FILENAME = 'RENDER'
    GIT.REPO = 'https://github.com/Krowemoh/basic-template-language.git'
 *
+   DIM ENV(ENV.SIZE)
+*
    DIM FILES(1000)
    MAT FILES = ''
    FILE.CTR = 0
@@ -16,4 +18,5 @@
 *
    END
 *
+
 
