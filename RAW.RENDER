@@ -4,6 +4,7 @@
    GIT.REPO = 'https://github.com/Krowemoh/basic-template-language.git'
 *
    DIM ENV(ENV.SIZE)
+   DIM FILES(1000)
 *
    EQU TRUE TO 1
    EQU FALSE TO 0
