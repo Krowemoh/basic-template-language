@@ -9,6 +9,8 @@
    @USER1 = 'EVALUATE'
    @USER2 = 'EVALUATE'
 *
+   DIM ENV(ENV.SIZE)
+*
    OPERATORS = ''
    OPERATORS<1> = '+'
    OPERATORS<2> = '-'
@@ -733,3 +735,4 @@ EVALUATE.EXPRESSION:NULL
 *
    END
 *
+
