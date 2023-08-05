@@ -507,7 +507,7 @@ EVALUATE.EXPRESSION:NULL
                            R.STRING = R.TOKENS<R.TOKENS.CTR>
                            CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE)
                            EVALUATED.TOKENS<-1> =  LOWER(R.VALUE)
-                        NEXT I
+                        NEXT R.TOKENS.CTR
 *
                         NUMBER.OF.EVALUATED.TOKENS = DCOUNT(EVALUATED.TOKENS,@AM)
 *
@@ -584,7 +584,7 @@ EVALUATE.EXPRESSION:NULL
                            R.STRING = R.TOKENS<R.TOKENS.CTR>
                            CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE)
                            EVALUATED.TOKENS<R.TOKENS.CTR> =  LOWER(R.VALUE)
-                        NEXT I
+                        NEXT R.TOKENS.CTR
 *
                         NUMBER.OF.EVALUATED.TOKENS = DCOUNT(EVALUATED.TOKENS,@AM)
 *
@@ -677,7 +677,7 @@ EVALUATE.EXPRESSION:NULL
                            R.STRING = R.TOKENS<R.TOKENS.CTR>
                            CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE)
                            EVALUATED.TOKENS<-1> =  LOWER(R.VALUE)
-                        NEXT I
+                        NEXT R.TOKENS.CTR
 *
                         NUMBER.OF.EVALUATED.TOKENS = DCOUNT(EVALUATED.TOKENS,@AM)
 *
