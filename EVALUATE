@@ -1,4 +1,4 @@
-   SUBROUTINE EVALUATE(MAT ENV,ENV.SIZE,TOKEN.LINE,VALUE)
+   SUBROUTINE EVALUATE(MAT ENV,ENV.SIZE,TOKEN.LINE,VALUE,MAP.CACHE)
 *
    GIT.FILENAME = 'EVALUATE'
    GIT.REPO = 'https://github.com/Krowemoh/basic-template-language.git'
@@ -8,6 +8,13 @@
 *
    @USER1 = 'EVALUATE'
    @USER2 = 'EVALUATE'
+*
+   IF NUM(TOKEN.LINE) THEN
+      VALUE = TOKEN.LINE
+      RETURN
+   END
+*
+   GOSUB MAP.RAISE.SETUP
 *
    DIM ENV(ENV.SIZE)
 *
@@ -88,7 +95,7 @@ TOKENIZE.STRING:NULL
 *
    TOKEN.LINE.LEN = LEN(TOKEN.LINE)
 *
-   FOR TOKENIZE.LETTER.CTR = 1 TO TOKEN.LINE.LEN 
+   FOR TOKENIZE.LETTER.CTR = 1 TO TOKEN.LINE.LEN
       CHARACTER = TOKEN.LINE[TOKENIZE.LETTER.CTR,1]
       PREV.CHARACTER = TOKEN.LINE[TOKENIZE.LETTER.CTR-1,1]
 *
@@ -456,6 +463,7 @@ EVALUATE.EXPRESSION:NULL
                REGISTERS<REGISTER.PTR> = LOWER(TOKEN)
 *
             END ELSE
+*
                RESOLVED.VALUE = ''
 *
                R.VAR.NAME = ''
@@ -505,7 +513,7 @@ EVALUATE.EXPRESSION:NULL
 *
                         FOR R.TOKENS.CTR = 1 TO R.TOKENS.LEN
                            R.STRING = R.TOKENS<R.TOKENS.CTR>
-                           CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE)
+                           CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE)
                            EVALUATED.TOKENS<-1> =  LOWER(R.VALUE)
                         NEXT R.TOKENS.CTR
 *
@@ -519,11 +527,12 @@ EVALUATE.EXPRESSION:NULL
                            REGISTER.PTR = REGISTER.PTR - 1
 *
                         END ELSE
-                           CALL MAP.HAS(MAT ENV,ENV.SIZE,R.VAR.NAME,VALUE.EXISTS)
 *
-                           IF VALUE.EXISTS THEN
-                              CALL MAP.GET(MAT ENV,ENV.SIZE,R.VAR.NAME,RESOLVED.VALUE)
-                           END ELSE
+                           MAP.KEY = R.VAR.NAME
+                           GOSUB ENV.GET
+                           RESOLVED.VALUE = MAP.VALUE
+*
+                           IF NOT(ENV.HAS.FLAG) THEN
                               PRINT 'Evaluate Error: "' : R.VAR.NAME : '" does not exist.'
                               STOP
                            END
@@ -582,13 +591,18 @@ EVALUATE.EXPRESSION:NULL
 *
                         FOR R.TOKENS.CTR = 1 TO R.TOKENS.LEN
                            R.STRING = R.TOKENS<R.TOKENS.CTR>
-                           CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE)
+                           CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE)
                            EVALUATED.TOKENS<R.TOKENS.CTR> =  LOWER(R.VALUE)
                         NEXT R.TOKENS.CTR
 *
                         NUMBER.OF.EVALUATED.TOKENS = DCOUNT(EVALUATED.TOKENS,@AM)
 *
                         BEGIN CASE
+                           CASE R.VAR.NAME = 'ENV'
+                              MAP.KEY = RAISE(EVALUATED.TOKENS<1>)
+                              GOSUB ENV.GET
+                              RESOLVED.VALUE = MAP.VALUE
+*
                            CASE R.VAR.NAME = 'DCOUNT'
                               P1 = RAISE(EVALUATED.TOKENS<1>)
                               P2 = RAISE(EVALUATED.TOKENS<2>)
@@ -638,6 +652,7 @@ EVALUATE.EXPRESSION:NULL
                         EXIT
 *
                      CASE R.CHAR = '<'
+*
                         R.CTR = R.CTR + 1
                         STACK.CTR = 1
 *
@@ -648,7 +663,13 @@ EVALUATE.EXPRESSION:NULL
                            R.CHAR = TOKEN[R.CTR,1]
 *
                            IF R.CHAR = ',' AND STACK.CTR = 1 THEN
-                              R.TOKENS<-1> =  R.STRING
+                              IF NUM(R.STRING) THEN
+                                 R.VALUE = R.STRING
+                              END ELSE
+                                 CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE)
+                              END
+                              R.TOKENS<-1> =  R.VALUE
+*
                               R.STRING = ''
 *
                            END ELSE IF R.CHAR = '<' THEN
@@ -668,44 +689,38 @@ EVALUATE.EXPRESSION:NULL
                            R.CTR = R.CTR + 1
                         REPEAT
 *
-                        R.TOKENS<-1> =  R.STRING
-*
-                        EVALUATED.TOKENS = ''
-                        R.TOKENS.LEN = DCOUNT(R.TOKENS,@AM)
-*
-                        FOR R.TOKENS.CTR = 1 TO R.TOKENS.LEN
-                           R.STRING = R.TOKENS<R.TOKENS.CTR>
-                           CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE)
-                           EVALUATED.TOKENS<-1> =  LOWER(R.VALUE)
-                        NEXT R.TOKENS.CTR
-*
-                        NUMBER.OF.EVALUATED.TOKENS = DCOUNT(EVALUATED.TOKENS,@AM)
-*
-                        P1 = RAISE(EVALUATED.TOKENS<1>)
-                        P2 = RAISE(EVALUATED.TOKENS<2>)
-                        P3 = RAISE(EVALUATED.TOKENS<3>)
-*
-                        CALL MAP.HAS(MAT ENV,ENV.SIZE,R.VAR.NAME,VALUE.EXISTS)
-*
-                        IF VALUE.EXISTS THEN
-                           CALL MAP.GET(MAT ENV,ENV.SIZE,R.VAR.NAME,RESOLVED.VALUE)
+                        IF NUM(R.STRING) THEN
+                           R.VALUE = R.STRING
                         END ELSE
+                           CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE)
+                        END
+                        R.TOKENS<-1> =  R.VALUE
+*
+                        R.TOKENS.LEN  = DCOUNT(R.TOKENS,@AM)
+*
+                        P1 = R.TOKENS<1>
+                        P2 = R.TOKENS<2>
+                        P3 = R.TOKENS<3>
+*
+                        MAP.KEY = R.VAR.NAME
+                        GOSUB ENV.GET
+                        RESOLVED.VALUE = MAP.VALUE
+*
+                        IF NOT(ENV.HAS.FLAG) THEN
                            PRINT 'Evaluate Error: "' : R.VAR.NAME : '" does not exist.'
                            STOP
                         END
 *
-                        IF NUMBER.OF.EVALUATED.TOKENS = 1 THEN
-                           RESOLVED.VALUE = RESOLVED.VALUE<P1>
-                           
-                        END ELSE IF NUMBER.OF.EVALUATED.TOKENS = 2 THEN
-                           RESOLVED.VALUE = RESOLVED.VALUE<P1,P2>
+                        BEGIN CASE
+                           CASE R.TOKENS.LEN = 1
+                              RESOLVED.VALUE = RESOLVED.VALUE<P1>
+                              
+                           CASE R.TOKENS.LEN = 2
+                              RESOLVED.VALUE = RESOLVED.VALUE<P1,P2>
 *
-                        END ELSE IF NUMBER.OF.EVALUATED.TOKENS = 3 THEN
-                           RESOLVED.VALUE = RESOLVED.VALUE<P1,P2,P3>
-*
-                        END ELSE
-*
-                        END
+                           CASE R.TOKENS.LEN = 3
+                              RESOLVED.VALUE = RESOLVED.VALUE<P1,P2,P3>
+                        END CASE
 *
                         VARIABLE.RESOLVED = TRUE
 *
@@ -718,7 +733,9 @@ EVALUATE.EXPRESSION:NULL
                NEXT R.CTR
 *
                IF NOT(VARIABLE.RESOLVED) THEN
-                  CALL MAP.GET(MAT ENV,ENV.SIZE,R.VAR.NAME,RESOLVED.VALUE)
+                  MAP.KEY = R.VAR.NAME
+                  GOSUB ENV.GET
+                  RESOLVED.VALUE = MAP.VALUE
                END
 *
                REGISTERS<REGISTER.PTR> = LOWER(RESOLVED.VALUE)
@@ -731,8 +748,71 @@ EVALUATE.EXPRESSION:NULL
 *
    RETURN
 *
+*********************  S U B R O U T I N E  *********************
+*
+ENV.GET:NULL
+*
+   LOCATE(MAP.KEY,MAP.CACHE<1>,1,1;CACHE.POS) THEN
+      MAP.POS = MAP.CACHE<2,CACHE.POS>
+*
+   END ELSE
+      MAP.KEY.LEN = LEN(MAP.KEY)
+*
+      MAP.HASH = 5381
+*
+      FOR MAP.KEY.CTR = 1 TO MAP.KEY.LEN
+         MAP.HASH = SADD(SMUL(MAP.HASH,33),SEQ(MAP.KEY[MAP.KEY.CTR,1]))
+      NEXT MAP.KEY.CTR
+*
+      MAP.D = SDIV(MAP.HASH,ENV.SIZE)
+      MAP.E = INDEX(MAP.D,'.',1)
+*
+      IF MAP.E = 0 THEN MAP.E = LEN(MAP.D)
+*
+      MAP.DIVISION = MAP.D[1,MAP.E]
+      MAP.MULTIPLE = SMUL(MAP.DIVISION,ENV.SIZE)
+      MAP.POS = SSUB(MAP.HASH,MAP.MULTIPLE) + 1
+   END
+*
+   LOCATE(MAP.KEY,ENV(MAP.POS)<1>,1,1;ANYPOS) THEN
+      MAP.VALUE = ENV(MAP.POS)<1,2,ANYPOS>
+      GOSUB MAP.RAISE3
+      ENV.HAS.FLAG = TRUE
+   END ELSE
+      MAP.VALUE = ''
+      ENV.HAS.FLAG = FALSE
+   END
+*
+   IF DCOUNT(MAP.CACHE<1>,@VM) > 5 THEN
+      MAP.CACHE<1,1> = MAP.KEY
+      MAP.CACHE<2,1> = MAP.POS
+   END ELSE
+      MAP.CACHE<1,-1> = MAP.KEY
+      MAP.CACHE<2,-1> = MAP.POS
+   END
+*
+*
+   RETURN
+*
+*********************  S U B R O U T I N E  *********************
+*
+MAP.RAISE.SETUP:NULL
+*
+   MAP.RAISE.HIGH = CHAR(256):CHAR(255):CHAR(254):CHAR(253):CHAR(252):CHAR(251):CHAR(250):CHAR(249):CHAR(248):CHAR(247):CHAR(246):CHAR(245):CHAR(244):CHAR(243):CHAR(242):CHAR(241):CHAR(240):CHAR(239):CHAR(238):CHAR(237):CHAR(236):CHAR(235):CHAR(234):CHAR(233):CHAR(232):CHAR(231):CHAR(230):CHAR(229):CHAR(228):CHAR(227):CHAR(226):CHAR(225):CHAR(224):CHAR(223):CHAR(222):CHAR(221):CHAR(220):CHAR(219):CHAR(218):CHAR(217):CHAR(216):CHAR(215):CHAR(214):CHAR(213):CHAR(212):CHAR(211):CHAR(210):CHAR(209):CHAR(208):CHAR(207):CHAR(206):CHAR(205):CHAR(204):CHAR(203)
+*
+   MAP.RAISE.LOW = CHAR(253):CHAR(252):CHAR(251):CHAR(250):CHAR(249):CHAR(248):CHAR(247):CHAR(246):CHAR(245):CHAR(244):CHAR(243):CHAR(242):CHAR(241):CHAR(240):CHAR(239):CHAR(238):CHAR(237):CHAR(236):CHAR(235):CHAR(234):CHAR(233):CHAR(232):CHAR(231):CHAR(230):CHAR(229):CHAR(228):CHAR(227):CHAR(226):CHAR(225):CHAR(224):CHAR(223):CHAR(222):CHAR(221):CHAR(220):CHAR(219):CHAR(218):CHAR(217):CHAR(216):CHAR(215):CHAR(214):CHAR(213):CHAR(212):CHAR(211):CHAR(210):CHAR(209):CHAR(208):CHAR(207):CHAR(206):CHAR(205):CHAR(204):CHAR(203):CHAR(202):CHAR(201):CHAR(200)
+*
+   RETURN
+*
+*********************  S U B R O U T I N E  *********************
+*
+MAP.RAISE3:NULL
+*
+   CONVERT MAP.RAISE.LOW TO MAP.RAISE.HIGH IN MAP.VALUE
+*
+   RETURN
+*
 * END OF PROGRAM
 *
    END
 *
-
