@@ -1,4 +1,4 @@
-   SUBROUTINE EVALUATE(MAT ENV,ENV.SIZE,TOKEN.LINE,VALUE,MAP.CACHE)
+   SUBROUTINE EVALUATE(MAT ENV,ENV.SIZE,TOKEN.LINE,VALUE,MAP.CACHE,PARSE.CACHE)
 *
    GIT.FILENAME = 'EVALUATE'
    GIT.REPO = 'https://github.com/Krowemoh/basic-template-language.git'
@@ -65,13 +65,19 @@
    BREAK.CHARACTERS = ': + - / # ^ ( )'
    CONVERT ' ' TO @AM IN BREAK.CHARACTERS
 *
-   TOKENS = ''
-   GOSUB TOKENIZE.STRING
+   LOCATE(TOKEN.LINE,PARSE.CACHE<1>,1;PARSE.POS) THEN
+      TOKENS = RAISE(PARSE.CACHE<2,PARSE.POS>)
 *
-   POSTFIX = ''
-   GOSUB INFIX.TO.POSTFIX
+   END ELSE
+      TOKENS = ''
+      GOSUB TOKENIZE.STRING
 *
-   TOKENS = POSTFIX
+      POSTFIX = ''
+      GOSUB INFIX.TO.POSTFIX
+*
+      TOKENS = POSTFIX
+   END
+*
    VALUE = ''
    GOSUB EVALUATE.EXPRESSION
 *
@@ -359,6 +365,14 @@ INFIX.TO.POSTFIX:NULL
       POSTFIX<-1> = STACK.OPERATOR
    NEXT STACK.CTR
 *
+   IF DCOUNT(PARSE.CACHE<1>,@VM) > 10 THEN
+      PARSE.CACHE<1,1> = TOKEN.LINE
+      PARSE.CACHE<2,1> = LOWER(POSTFIX)
+   END ELSE
+      PARSE.CACHE<1,-1> = TOKEN.LINE
+      PARSE.CACHE<2,-1> = LOWER(POSTFIX)
+   END
+*
    RETURN
 *********************  S U B R O U T I N E  *********************
 *
@@ -513,7 +527,7 @@ EVALUATE.EXPRESSION:NULL
 *
                         FOR R.TOKENS.CTR = 1 TO R.TOKENS.LEN
                            R.STRING = R.TOKENS<R.TOKENS.CTR>
-                           CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE)
+                           CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE,PARSE.CACHE)
                            EVALUATED.TOKENS<-1> =  LOWER(R.VALUE)
                         NEXT R.TOKENS.CTR
 *
@@ -591,7 +605,7 @@ EVALUATE.EXPRESSION:NULL
 *
                         FOR R.TOKENS.CTR = 1 TO R.TOKENS.LEN
                            R.STRING = R.TOKENS<R.TOKENS.CTR>
-                           CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE)
+                           CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE,PARSE.CACHE)
                            EVALUATED.TOKENS<R.TOKENS.CTR> =  LOWER(R.VALUE)
                         NEXT R.TOKENS.CTR
 *
@@ -666,7 +680,7 @@ EVALUATE.EXPRESSION:NULL
                               IF NUM(R.STRING) THEN
                                  R.VALUE = R.STRING
                               END ELSE
-                                 CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE)
+                                 CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE,PARSE.CACHE)
                               END
                               R.TOKENS<-1> =  R.VALUE
 *
@@ -692,7 +706,7 @@ EVALUATE.EXPRESSION:NULL
                         IF NUM(R.STRING) THEN
                            R.VALUE = R.STRING
                         END ELSE
-                           CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE)
+                           CALL EVALUATE(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE,PARSE.CACHE)
                         END
                         R.TOKENS<-1> =  R.VALUE
 *
@@ -752,7 +766,7 @@ EVALUATE.EXPRESSION:NULL
 *
 ENV.GET:NULL
 *
-   LOCATE(MAP.KEY,MAP.CACHE<1>,1,1;CACHE.POS) THEN
+   LOCATE(MAP.KEY,MAP.CACHE<1>,1;CACHE.POS) THEN
       MAP.POS = MAP.CACHE<2,CACHE.POS>
 *
    END ELSE
@@ -790,7 +804,6 @@ ENV.GET:NULL
       MAP.CACHE<1,-1> = MAP.KEY
       MAP.CACHE<2,-1> = MAP.POS
    END
-*
 *
    RETURN
 *
