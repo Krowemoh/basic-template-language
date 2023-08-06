@@ -35,5 +35,5 @@ Installation can be done by using NPM. You can also manually install the below p
 ```
 NPM INSTALL BP RENDER https://raw.githubusercontent.com/Krowemoh/basic-template-language/main/RENDER
 NPM INSTALL BP RAW.RENDER https://raw.githubusercontent.com/Krowemoh/basic-template-language/main/RAW.RENDER
-NPM INSTALL BP EVALUATE https://raw.githubusercontent.com/Krowemoh/basic-template-language/main/EVALUATE
+NPM INSTALL BP EVALUATE.BTL https://raw.githubusercontent.com/Krowemoh/basic-template-language/main/EVALUATE.BTL
 ```
