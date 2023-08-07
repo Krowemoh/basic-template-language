@@ -368,17 +368,6 @@ INFIX.TO.POSTFIX:NULL
       POSTFIX<-1> = STACK.OPERATOR
    NEXT STACK.CTR
 *
-   LOWER3.VALUE = POSTFIX
-   GOSUB LOWER3
-*
-   IF DCOUNT(PARSE.CACHE<1>,@VM) > 10 THEN
-      PARSE.CACHE<1,1> = TOKEN.LINE
-      PARSE.CACHE<2,1> = LOWER3.VALUE
-   END ELSE
-      PARSE.CACHE<1,-1> = TOKEN.LINE
-      PARSE.CACHE<2,-1> = LOWER3.VALUE
-   END
-*
    RETURN
 *********************  S U B R O U T I N E  *********************
 *
@@ -673,48 +662,73 @@ EVALUATE.EXPRESSION:NULL
 *
                      CASE R.CHAR = '<'
 *
-                        R.CTR = R.CTR + 1
-                        STACK.CTR = 1
+                        LOCATE(TOKEN.LINE,PARSE.CACHE<1>,1;PARSE.POS) THEN
+                           RAISE3.VALUE = PARSE.CACHE<3,PARSE.POS>
+                           GOSUB RAISE3
+                           R.TOKENS = RAISE3.VALUE
 *
-                        R.TOKENS = ''
-                        R.STRING = ''
+                        END ELSE
+                           R.CTR = R.CTR + 1
+                           STACK.CTR = 1
 *
-                        LOOP UNTIL STACK.CTR = 0 OR R.CTR > TOKEN.LEN DO
-                           R.CHAR = TOKEN[R.CTR,1]
+                           R.TOKENS = ''
+                           R.STRING = ''
 *
-                           IF R.CHAR = ',' AND STACK.CTR = 1 THEN
-                              IF NUM(R.STRING) THEN
-                                 R.VALUE = R.STRING
+                           LOOP UNTIL STACK.CTR = 0 OR R.CTR > TOKEN.LEN DO
+                              R.CHAR = TOKEN[R.CTR,1]
+*
+                              IF R.CHAR = ',' AND STACK.CTR = 1 THEN
+                                 IF NUM(R.STRING) THEN
+                                    R.VALUE = R.STRING
+                                 END ELSE
+                                    CALL EVALUATE.BTL(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE,PARSE.CACHE)
+                                 END
+                                 R.TOKENS<-1> =  R.VALUE
+*
+                                 R.STRING = ''
+*
+                              END ELSE IF R.CHAR = '<' THEN
+                                 STACK.CTR = STACK.CTR + 1
+                                 R.STRING = R.STRING : R.CHAR
+*
+                              END ELSE IF R.CHAR = '>' THEN
+                                 STACK.CTR = STACK.CTR - 1
+                                 IF STACK.CTR # 0 THEN
+                                    R.STRING = R.STRING : R.CHAR
+                                 END
+*
                               END ELSE
-                                 CALL EVALUATE.BTL(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE,PARSE.CACHE)
-                              END
-                              R.TOKENS<-1> =  R.VALUE
-*
-                              R.STRING = ''
-*
-                           END ELSE IF R.CHAR = '<' THEN
-                              STACK.CTR = STACK.CTR + 1
-                              R.STRING = R.STRING : R.CHAR
-*
-                           END ELSE IF R.CHAR = '>' THEN
-                              STACK.CTR = STACK.CTR - 1
-                              IF STACK.CTR # 0 THEN
                                  R.STRING = R.STRING : R.CHAR
                               END
 *
+                              R.CTR = R.CTR + 1
+                           REPEAT
+*
+                           IF NUM(R.STRING) THEN
+                              R.VALUE = R.STRING
                            END ELSE
-                              R.STRING = R.STRING : R.CHAR
+                              CALL EVALUATE.BTL(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE,PARSE.CACHE)
                            END
 *
-                           R.CTR = R.CTR + 1
-                        REPEAT
+                           R.TOKENS<-1> =  R.VALUE
 *
-                        IF NUM(R.STRING) THEN
-                           R.VALUE = R.STRING
-                        END ELSE
-                           CALL EVALUATE.BTL(MAT ENV,ENV.SIZE,R.STRING,R.VALUE,MAP.CACHE,PARSE.CACHE)
+                           LOWER3.VALUE = POSTFIX
+                           GOSUB LOWER3
+                           POSTFIX = LOWER3.VALUE
+*
+                           LOWER3.VALUE = R.TOKENS
+                           GOSUB LOWER3
+*
+                           IF DCOUNT(PARSE.CACHE<1>,@VM) > 10 THEN
+                              PARSE.CACHE<1,1> = TOKEN.LINE
+                              PARSE.CACHE<2,1> = POSTFIX
+                              PARSE.CACHE<3,1> = LOWER3.VALUE
+                           END ELSE
+                              PARSE.CACHE<1,-1> = TOKEN.LINE
+                              PARSE.CACHE<2,-1> = POSTFIX
+                              PARSE.CACHE<3,-1> = LOWER3.VALUE
+                           END
                         END
-                        R.TOKENS<-1> =  R.VALUE
 *
                         R.TOKENS.LEN  = DCOUNT(R.TOKENS,@AM)
 *
@@ -792,6 +806,15 @@ ENV.GET:NULL
       MAP.DIVISION = MAP.D[1,MAP.E]
       MAP.MULTIPLE = SMUL(MAP.DIVISION,ENV.SIZE)
       MAP.POS = SSUB(MAP.HASH,MAP.MULTIPLE) + 1
+*
+      IF DCOUNT(MAP.CACHE<1>,@VM) > 5 THEN
+         MAP.CACHE<1,1> = MAP.KEY
+         MAP.CACHE<2,1> = MAP.POS
+      END ELSE
+         MAP.CACHE<1> = MAP.CACHE<1> : @VM: MAP.KEY
+         MAP.CACHE<2> = MAP.CACHE<2> : @VM: MAP.POS
+      END
+*
    END
 *
    LOCATE(MAP.KEY,ENV(MAP.POS)<1>,1,1;ANYPOS) THEN
@@ -803,14 +826,6 @@ ENV.GET:NULL
    END ELSE
       MAP.VALUE = ''
       ENV.HAS.FLAG = FALSE
-   END
-*
-   IF DCOUNT(MAP.CACHE<1>,@VM) > 5 THEN
-      MAP.CACHE<1,1> = MAP.KEY
-      MAP.CACHE<2,1> = MAP.POS
-   END ELSE
-      MAP.CACHE<1,-1> = MAP.KEY
-      MAP.CACHE<2,-1> = MAP.POS
    END
 *
    RETURN
