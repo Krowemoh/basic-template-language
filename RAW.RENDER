@@ -80,6 +80,7 @@
                CALL EVALUATE.BTL(MAT ENV,ENV.SIZE,END.EXPR,LOOP.END,MAP.CACHE,PARSE.CACHE)
 *
                FOR LOOP.INDEX = LOOP.START TO LOOP.END
+               PARSE.CACHE = ''
                   MAP.KEY = LOOP.VAR
                   MAP.VALUE = LOOP.INDEX
                   GOSUB ENV.SET
