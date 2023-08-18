@@ -723,10 +723,12 @@ EVALUATE.EXPRESSION:NULL
                               PARSE.CACHE<1,1> = TOKEN.LINE
                               PARSE.CACHE<2,1> = POSTFIX
                               PARSE.CACHE<3,1> = LOWER3.VALUE
+                              PARSE.CACHE<4,1> = R.VAR.NAME
                            END ELSE
                               PARSE.CACHE<1,-1> = TOKEN.LINE
                               PARSE.CACHE<2,-1> = POSTFIX
                               PARSE.CACHE<3,-1> = LOWER3.VALUE
+                              PARSE.CACHE<4,-1> = R.VAR.NAME
                            END
                         END
 *
@@ -871,3 +873,4 @@ LOWER3:NULL
 *
    END
 *
+
