@@ -11,6 +11,7 @@
 *
    EQU FOR.TOKEN TO 1
 *
+   GOSUB RAISE3.SETUP
    GOSUB MAP.LOWER.SETUP
 *
    NUMBER.OF.LINES = DCOUNT(TEMPLATE,@AM)
@@ -287,21 +288,69 @@
 *
             IF PIECE[1,2] = '{{' THEN
                BASIC.LINE = TRIM(PIECE[3,PIECE.LEN-4])
+               CACHED = FALSE
+               LOCATE(BASIC.LINE,PARSE.CACHE<1>,1;PARSE.POS) THEN
+                  R.VAR.NAME = PARSE.CACHE<4,PARSE.POS>
 *
-               IF INDEX(PIECE,'=',1) = 0 THEN
-                  CALL EVALUATE.BTL(MAT ENV,ENV.SIZE,BASIC.LINE,VALUE,MAP.CACHE,PARSE.CACHE)
+                  RAISE3.VALUE = PARSE.CACHE<2,PARSE.POS>
+                  GOSUB RAISE3
+                  POSTFIX = RAISE3.VALUE
+*
+                  RAISE3.VALUE = PARSE.CACHE<3,PARSE.POS>
+                  GOSUB RAISE3
+                  R.TOKENS = RAISE3.VALUE
+*
+                  IF DCOUNT(POSTFIX,@AM) = 1 AND INDEX(BASIC.LINE,'<',1) # 0 AND INDEX(BASIC.LINE,'>',1) # 0 THEN
+                     CACHED = TRUE
+                  END
+               END
+*
+               IF CACHED THEN
+                  R.TOKENS.LEN  = DCOUNT(R.TOKENS,@AM)
+*
+                  P1 = R.TOKENS<1>
+                  P2 = R.TOKENS<2>
+                  P3 = R.TOKENS<3>
+*
+                  MAP.KEY = R.VAR.NAME
+                  GOSUB ENV.GET
+                  RESOLVED.VALUE = MAP.VALUE
+*
+                  IF NOT(ENV.HAS.FLAG) THEN
+                     PRINT 'Evaluate Error: "' : R.VAR.NAME : '" does not exist.'
+                     STOP
+                  END
+*
+                  BEGIN CASE
+                     CASE R.TOKENS.LEN = 1
+                        RESOLVED.VALUE = RESOLVED.VALUE<P1>
+                        
+                     CASE R.TOKENS.LEN = 2
+                        RESOLVED.VALUE = RESOLVED.VALUE<P1,P2>
+*
+                     CASE R.TOKENS.LEN = 3
+                        RESOLVED.VALUE = RESOLVED.VALUE<P1,P2,P3>
+                  END CASE
+*
+                  VALUE = RESOLVED.VALUE
                   L = L : VALUE
 *
                END ELSE
-                  BASIC.LINE = CHANGE(BASIC.LINE,'=',@AM,1)
+                  IF INDEX(PIECE,'=',1) = 0 THEN
+                     CALL EVALUATE.BTL(MAT ENV,ENV.SIZE,BASIC.LINE,VALUE,MAP.CACHE,PARSE.CACHE)
+                     L = L : VALUE
 *
-                  RH = TRIM(FIELD(BASIC.LINE,@AM,1))
-                  LH = TRIM(FIELD(BASIC.LINE,@AM,2))
+                  END ELSE
+                     BASIC.LINE = CHANGE(BASIC.LINE,'=',@AM,1)
 *
-                  CALL EVALUATE.BTL(MAT ENV,ENV.SIZE,LH,VALUE,MAP.CACHE,PARSE.CACHE)
-                  MAP.KEY = RH
-                  MAP.VALUE = VALUE
-                  GOSUB ENV.SET
+                     RH = TRIM(FIELD(BASIC.LINE,@AM,1))
+                     LH = TRIM(FIELD(BASIC.LINE,@AM,2))
+*
+                     CALL EVALUATE.BTL(MAT ENV,ENV.SIZE,LH,VALUE,MAP.CACHE,PARSE.CACHE)
+                     MAP.KEY = RH
+                     MAP.VALUE = VALUE
+                     GOSUB ENV.SET
+                  END
                END
 *
             END ELSE
@@ -465,6 +514,75 @@ ENV.SET:NULL
       END
    END
 *
+   RETURN
+*
+*********************  S U B R O U T I N E  *********************
+*
+ENV.GET:NULL
+*
+   LOCATE(MAP.KEY,MAP.CACHE<1>,1;CACHE.POS) THEN
+      MAP.POS = MAP.CACHE<2,CACHE.POS>
+*
+   END ELSE
+      MAP.KEY.LEN = LEN(MAP.KEY)
+*
+      MAP.HASH = 5381
+*
+      FOR MAP.KEY.CTR = 1 TO MAP.KEY.LEN
+         MAP.HASH = SADD(SMUL(MAP.HASH,33),SEQ(MAP.KEY[MAP.KEY.CTR,1]))
+      NEXT MAP.KEY.CTR
+*
+      MAP.D = SDIV(MAP.HASH,ENV.SIZE)
+      MAP.E = INDEX(MAP.D,'.',1)
+*
+      IF MAP.E = 0 THEN MAP.E = LEN(MAP.D)
+*
+      MAP.DIVISION = MAP.D[1,MAP.E]
+      MAP.MULTIPLE = SMUL(MAP.DIVISION,ENV.SIZE)
+      MAP.POS = SSUB(MAP.HASH,MAP.MULTIPLE) + 1
+*
+      IF DCOUNT(MAP.CACHE<1>,@VM) > 5 THEN
+         MAP.CACHE<1,1> = MAP.KEY
+         MAP.CACHE<2,1> = MAP.POS
+      END ELSE
+         MAP.CACHE<1> = MAP.CACHE<1> : @VM: MAP.KEY
+         MAP.CACHE<2> = MAP.CACHE<2> : @VM: MAP.POS
+      END
+*
+   END
+*
+   LOCATE(MAP.KEY,ENV(MAP.POS)<1>,1,1;ANYPOS) THEN
+      RAISE3.VALUE = ENV(MAP.POS)<1,2,ANYPOS>
+      GOSUB RAISE3
+      MAP.VALUE = RAISE3.VALUE
+*
+      ENV.HAS.FLAG = TRUE
+   END ELSE
+      MAP.VALUE = ''
+      ENV.HAS.FLAG = FALSE
+   END
+*
+   RETURN
+*
+*********************  S U B R O U T I N E  *********************
+*
+RAISE3.SETUP:NULL
+*
+   RAISE3.HIGH = CHAR(256):CHAR(255):CHAR(254):CHAR(253):CHAR(252):CHAR(251):CHAR(250):CHAR(249):CHAR(248):CHAR(247):CHAR(246):CHAR(245):CHAR(244):CHAR(243):CHAR(242):CHAR(241):CHAR(240):CHAR(239):CHAR(238):CHAR(237):CHAR(236):CHAR(235):CHAR(234):CHAR(233):CHAR(232):CHAR(231):CHAR(230):CHAR(229):CHAR(228):CHAR(227):CHAR(226):CHAR(225):CHAR(224):CHAR(223):CHAR(222):CHAR(221):CHAR(220):CHAR(219):CHAR(218):CHAR(217):CHAR(216):CHAR(215):CHAR(214):CHAR(213):CHAR(212):CHAR(211):CHAR(210):CHAR(209):CHAR(208):CHAR(207):CHAR(206):CHAR(205):CHAR(204):CHAR(203)
+*
+   RAISE3.LOW = CHAR(253):CHAR(252):CHAR(251):CHAR(250):CHAR(249):CHAR(248):CHAR(247):CHAR(246):CHAR(245):CHAR(244):CHAR(243):CHAR(242):CHAR(241):CHAR(240):CHAR(239):CHAR(238):CHAR(237):CHAR(236):CHAR(235):CHAR(234):CHAR(233):CHAR(232):CHAR(231):CHAR(230):CHAR(229):CHAR(228):CHAR(227):CHAR(226):CHAR(225):CHAR(224):CHAR(223):CHAR(222):CHAR(221):CHAR(220):CHAR(219):CHAR(218):CHAR(217):CHAR(216):CHAR(215):CHAR(214):CHAR(213):CHAR(212):CHAR(211):CHAR(210):CHAR(209):CHAR(208):CHAR(207):CHAR(206):CHAR(205):CHAR(204):CHAR(203):CHAR(202):CHAR(201):CHAR(200)
+*
+   RETURN
+*
+*********************  S U B R O U T I N E  *********************
+*
+RAISE3:NULL
+*
+   CONVERT RAISE3.LOW TO RAISE3.HIGH IN RAISE3.VALUE
+*
+   RETURN
+*
+*
 *********************  S U B R O U T I N E  *********************
 *
 MAP.LOWER.SETUP:NULL
@@ -487,3 +605,4 @@ MAP.LOWER3:NULL
 *
    END
 *
+   
