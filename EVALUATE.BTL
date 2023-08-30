@@ -491,6 +491,7 @@ EVALUATE.EXPRESSION:NULL
                      CASE R.CHAR = '['
                         R.CTR = R.CTR + 1
                         STACK.CTR = 1
+                        OTHER.STACK.CTR = 0
 *
                         R.TOKENS = ''
                         R.STRING = ''
@@ -498,7 +499,7 @@ EVALUATE.EXPRESSION:NULL
                         LOOP UNTIL STACK.CTR = 0 OR R.CTR > TOKEN.LEN DO
                            R.CHAR = TOKEN[R.CTR,1]
 *
-                           IF R.CHAR = ',' AND STACK.CTR = 1 THEN
+                           IF R.CHAR = ',' AND STACK.CTR = 1 AND OTHER.STACK.CTR = 0 THEN
                               R.TOKENS<-1> =  R.STRING
                               R.STRING = ''
 *
@@ -513,6 +514,12 @@ EVALUATE.EXPRESSION:NULL
                               END
 *
                            END ELSE
+                              IF R.CHAR = '(' OR R.CHAR = '<' THEN
+                                 OTHER.STACK.CTR = OTHER.STACK.CTR + 1
+                              END ELSE IF R.CHAR = ')' OR R.CHAR = '>' THEN
+                                 OTHER.STACK.CTR = OTHER.STACK.CTR - 1
+                              END
+*
                               R.STRING = R.STRING : R.CHAR
                            END
 *
@@ -572,11 +579,12 @@ EVALUATE.EXPRESSION:NULL
 *
                         R.TOKENS = ''
                         R.STRING = ''
+                        OTHER.STACK.CTR = 0
 *
                         LOOP UNTIL STACK.CTR = 0 OR R.CTR > TOKEN.LEN DO
                            R.CHAR = TOKEN[R.CTR,1]
 *
-                           IF R.CHAR = ',' AND STACK.CTR = 1 THEN
+                           IF R.CHAR = ',' AND STACK.CTR = 1 AND OTHER.STACK.CTR = 0 THEN
                               R.TOKENS<-1> =  R.STRING
                               R.STRING = ''
 *
@@ -591,6 +599,12 @@ EVALUATE.EXPRESSION:NULL
                               END
 *
                            END ELSE
+                              IF R.CHAR = '[' OR R.CHAR = '<' THEN
+                                 OTHER.STACK.CTR = OTHER.STACK.CTR + 1
+                              END ELSE IF R.CHAR = ']' OR R.CHAR = '>' THEN
+                                 OTHER.STACK.CTR = OTHER.STACK.CTR - 1
+                              END
+*
                               R.STRING = R.STRING : R.CHAR
                            END
 *
@@ -674,6 +688,7 @@ EVALUATE.EXPRESSION:NULL
                         END ELSE
                            R.CTR = R.CTR + 1
                            STACK.CTR = 1
+                           OTHER.STACK.CTR = 0
 *
                            R.TOKENS = ''
                            R.STRING = ''
@@ -681,7 +696,7 @@ EVALUATE.EXPRESSION:NULL
                            LOOP UNTIL STACK.CTR = 0 OR R.CTR > TOKEN.LEN DO
                               R.CHAR = TOKEN[R.CTR,1]
 *
-                              IF R.CHAR = ',' AND STACK.CTR = 1 THEN
+                              IF R.CHAR = ',' AND STACK.CTR = 1 AND OTHER.STACK.CTR = 0 THEN
                                  IF NUM(R.STRING) THEN
                                     R.VALUE = R.STRING
                                  END ELSE
@@ -702,6 +717,12 @@ EVALUATE.EXPRESSION:NULL
                                  END
 *
                               END ELSE
+                                 IF R.CHAR = '(' OR R.CHAR = '[' THEN
+                                    OTHER.STACK.CTR = OTHER.STACK.CTR + 1
+                                 END ELSE IF R.CHAR = ')' OR R.CHAR = ']' THEN
+                                    OTHER.STACK.CTR = OTHER.STACK.CTR - 1
+                                 END
+*
                                  R.STRING = R.STRING : R.CHAR
                               END
 *
@@ -877,4 +898,5 @@ LOWER3:NULL
 *
    END
 *
+   
    
