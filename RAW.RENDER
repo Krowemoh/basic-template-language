@@ -80,7 +80,7 @@
                CALL EVALUATE.BTL(MAT ENV,ENV.SIZE,END.EXPR,LOOP.END,MAP.CACHE,PARSE.CACHE)
 *
                FOR LOOP.INDEX = LOOP.START TO LOOP.END
-               PARSE.CACHE = ''
+                  PARSE.CACHE = ''
                   MAP.KEY = LOOP.VAR
                   MAP.VALUE = LOOP.INDEX
                   GOSUB ENV.SET
@@ -267,6 +267,7 @@
                   RH = TRIM(FIELD(BASIC.LINE,@AM,1))
                   LH = TRIM(FIELD(BASIC.LINE,@AM,2))
 *
+                  PARSE.CACHE = ''
                   CALL EVALUATE.BTL(MAT ENV,ENV.SIZE,LH,VALUE,MAP.CACHE,PARSE.CACHE)
 *
                   MAP.KEY = RH
@@ -347,6 +348,7 @@
                      RH = TRIM(FIELD(BASIC.LINE,@AM,1))
                      LH = TRIM(FIELD(BASIC.LINE,@AM,2))
 *
+                     PARSE.CACHE = ''
                      CALL EVALUATE.BTL(MAT ENV,ENV.SIZE,LH,VALUE,MAP.CACHE,PARSE.CACHE)
                      MAP.KEY = RH
                      MAP.VALUE = VALUE
@@ -606,4 +608,5 @@ MAP.LOWER3:NULL
 *
    END
 *
+   
    
