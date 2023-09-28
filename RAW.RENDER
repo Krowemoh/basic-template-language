@@ -20,7 +20,7 @@
       LINE = TRIM(TEMPLATE<I>)
       LINE.LEN = LEN(LINE)
 *
-      IF LINE[1,2] = '{{' AND LINE[LINE.LEN-1,2] = '}}' THEN
+      IF LINE[1,2] = '{{' AND LINE[2] = '}}' THEN
          BASIC.LINE = TRIM(LINE[3,LINE.LEN-4])
 *
          FIRST.TOKEN = FIELD(BASIC.LINE,' ',1)
@@ -104,7 +104,7 @@
 *
                FOR COND.CTR = 1 TO NUMBER.OF.CONDITIONS UNTIL CONDITION.MET
                   C.EXPR = CONDITIONS<COND.CTR>
-                  BLOCK = BLOCKS<COND.CTR>
+                  BLOCK = RAISE(BLOCKS<COND.CTR>)
                   IF C.EXPR = '' THEN
                      RESULT.TEMP = ''
                      CALL RAW.RENDER(MAT ENV,ENV.SIZE,MAT FILES,FILE.CTR,BLOCK,RESULT.TEMP,MAP.CACHE,PARSE.CACHE)
@@ -145,8 +145,8 @@
 *
                FILENAME.IDENT = TRIM(OPEN.STATEMENT<2>)
 *
-               TRUE.BLOCK = BLOCKS<1>
-               FALSE.BLOCK = BLOCKS<2>
+               TRUE.BLOCK = RAISE(BLOCKS<1>)
+               FALSE.BLOCK = RAISE(BLOCKS<2>)
 *
                CALL EVALUATE.BTL(MAT ENV,ENV.SIZE,FILENAME.EXPR,FILE.NAME,MAP.CACHE,PARSE.CACHE)
 *
@@ -194,8 +194,8 @@
                FILE.NAME = TRIM(RH<1>)
                RECORD.ID.EXPR = TRIM(RH<2>)
 *
-               TRUE.BLOCK = BLOCKS<1>
-               FALSE.BLOCK = BLOCKS<2>
+               TRUE.BLOCK = RAISE(BLOCKS<1>)
+               FALSE.BLOCK = RAISE(BLOCKS<2>)
 *
                CALL EVALUATE.BTL(MAT ENV,ENV.SIZE,RECORD.ID.EXPR,RECORD.ID,MAP.CACHE,PARSE.CACHE)
 *
@@ -610,3 +610,4 @@ MAP.LOWER3:NULL
 *
    
    
+
