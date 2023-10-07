@@ -51,10 +51,18 @@
                   MAP.VALUE = LOOP.LIST<LOOP.INDEX>
                   GOSUB ENV.SET
 *
+                  MAP.KEY = 'LOOP.INDEX'
+                  MAP.VALUE = LOOP.INDEX
+                  GOSUB ENV.SET
+*
                   RESULT.TEMP = ''
                   CALL RAW.RENDER(MAT ENV,ENV.SIZE,MAT FILES,FILE.CTR,BLOCK,RESULT.TEMP,MAP.CACHE,PARSE.CACHE)
                   RESULT = RESULT : RESULT.TEMP
                NEXT LOOP.INDEX
+*
+               MAP.KEY = 'LOOP.INDEX'
+               MAP.VALUE = ''
+               GOSUB ENV.SET
 *
             CASE FIRST.TOKEN = 'FOR'
                LINE = CHANGE(LINE,' TO ',@AM)
@@ -610,4 +618,4 @@ MAP.LOWER3:NULL
 *
    
    
-
+   
