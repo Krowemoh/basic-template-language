@@ -636,7 +636,6 @@ EVALUATE.EXPRESSION:NULL
                               P3 = RAISE(EVALUATED.TOKENS<3>)
 *
                               RESOLVED.VALUE = FIELD(P1,P2,P3)
-                              PRINT RESOLVED.VALUE
 *
                            CASE R.VAR.NAME = 'DCOUNT'
                               P1 = RAISE(EVALUATED.TOKENS<1>)
