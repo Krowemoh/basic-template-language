@@ -630,11 +630,25 @@ EVALUATE.EXPRESSION:NULL
                               GOSUB ENV.GET
                               RESOLVED.VALUE = MAP.VALUE
 *
+                           CASE R.VAR.NAME = 'FIELD'
+                              P1 = RAISE(EVALUATED.TOKENS<1>)
+                              P2 = RAISE(EVALUATED.TOKENS<2>)
+                              P3 = RAISE(EVALUATED.TOKENS<3>)
+*
+                              RESOLVED.VALUE = FIELD(P1,P2,P3)
+                              PRINT RESOLVED.VALUE
+*
                            CASE R.VAR.NAME = 'DCOUNT'
                               P1 = RAISE(EVALUATED.TOKENS<1>)
                               P2 = RAISE(EVALUATED.TOKENS<2>)
 *
                               RESOLVED.VALUE = DCOUNT(P1,P2)
+*
+                           CASE R.VAR.NAME = 'COUNT'
+                              P1 = RAISE(EVALUATED.TOKENS<1>)
+                              P2 = RAISE(EVALUATED.TOKENS<2>)
+*
+                              RESOLVED.VALUE = COUNT(P1,P2)
 *
                            CASE R.VAR.NAME = 'LEN'
                               P1 = RAISE(EVALUATED.TOKENS<1>)
@@ -900,3 +914,4 @@ LOWER3:NULL
 *
    
    
+
